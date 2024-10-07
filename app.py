@@ -1,229 +1,283 @@
-import streamlit as st
+# Importing Libraries
 import pandas as pd
+import numpy as np
 import plotly.express as px
+import streamlit as st
+from streamlit.components.v1 import html
+from streamlit_option_menu import option_menu
+import warnings
 
-# the layout Variables
-st.set_page_config(page_title="Super Store Dashboard", 
-                   page_icon="https://en.wikipedia.org/wiki/Carrefour#/media/File:Carrefour_logo_no_tag.svggit",
-                   initial_sidebar_state="expanded",
-                   )
+# Importing Our Multipages
+import home
+import products
+import locations
 
-hero = st.container()
-topRow = st.container()
-midRow = st.container()
-chartRow = st.container()
-footer = st.container()
 
-# Load the data
-superSales = pd.read_csv('data/superSales.csv')
+def run():
+    st.set_page_config(
+        page_title="Shopping Trends",
+        page_icon="🛍️",
+        layout="wide"
+    )
 
-# CSS styles
-# Custom styling for top and down
-st.markdown(
-    """
+    warnings.simplefilter(action='ignore', category=FutureWarning)
+
+    # Function To Load Our Dataset
+    @st.cache_data
+    def load_data(the_file_path):
+        df = pd.read_csv(the_file_path)
+        df.columns = df.columns.str.replace(" ", "_")
+        df.rename(
+            columns={"Purchase_Amount_(USD)": "Price_in_USD"}, inplace=True)
+        df.set_index("Customer_ID", inplace=True)
+        return df
+
+    df = load_data("shopping_trends_updated.csv")
+
+    st.markdown(
+        """
     <style>
-    .top-stats {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin: 12px 0 40px 0;
-        width: 100%;
-        height: 40px;
-    }
-    .subheader {
-        font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
-    .stat {
-        flex: 1; 
+         .main {
+            text-align: center; 
+         }
 
-        border-radius: 4px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        background-color: #111;
+         div.block-containers{
+            padding-top: 0.5rem
+         }
 
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-    }
-    .stat p {
-        padding-top: 8px;
-    }
-    .stat p {
-        color: #bbb;
-        font-size: 12px;
-    }
-    .stat span {
-        color: #ddd;
-        font-size: 24px;
-        font-family: serif;
-    }
+         .st-emotion-cache-z5fcl4{
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            padding-left: 1.5rem;
+            padding-right: 2.8rem;
+            overflow-x: hidden;
+         }
+
+         .st-emotion-cache-16txtl3{
+            padding: 2.7rem 0.6rem
+         }
+         div.st-emotion-cache-1r6slb0{
+            padding: 15px 5px;
+            background-color: #111;  
+            border-radius: 5px;
+            border: 3px solid #5E0303;
+            opacity: 0.9;
+         }
+        div.st-emotion-cache-1r6slb0:hover{
+            transition: all 0.5s ease-in-out;
+            background-color: #000;  
+            border: 3px solid red;
+            opacity: 1;
+         }
+
+         .plot-container.plotly{
+            border: 4px solid #333;
+            border-radius: 7px;
+         }
+
+         div.st-emotion-cache-1r6slb0 span.st-emotion-cache-10trblm{
+            font: bold 24px tahoma
+         }
+         div [data-testid=stImage]{
+            text-align: center;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+        }
+        .st-emotion-cache-1v0mbdj{
+
+            display: block !important;
+        }
+
+
     </style>
     """,
-    unsafe_allow_html=True
-)
-
-# Sidebar
-with st.sidebar:
-    st.markdown(f'''
-        <style>
-        section[data-testid="stSidebar"] {{
-                width: 500px;
-                background-color: #000b1a;
-                }}
-        section[data-testid="stSidebar"] h1 {{
-                color: #e3eefc;
-                }}
-        section[data-testid="stSidebar"] p {{
-                color: #ddd;
-                text-align: left;
-                }}
-        section[data-testid="stSidebar"] svg {{
-                fill: #ddd;
-                }}
-        </style>
-    ''',unsafe_allow_html=True)
-    st.title(":anchor: About the dataset")
-    st.markdown("The growth of supermarkets in most populated cities are increasing and market competitions are also high. In this dashboard we'll give it a try and turn everything into a readable visualizations.")
-    
-    # The Selectbox
-    Product_lines = superSales['Product_line'].unique()
-    line = st.selectbox('',['Choose the Product Line'] + list(Product_lines))
-    if line == 'Choose the Product Line':
-        chosen_line = superSales
-    else:
-        chosen_line = superSales[superSales['Product_line'] == line]
-
-    # Customizing the select box
-    st.markdown(f'''
-    <style>
-        .stSelectbox div div {{
-                background-color: #fafafa;
-                color: #333;
-        }}
-        .stSelectbox div div:hover {{
-                cursor: pointer
-        }}
-        .stSelectbox div div .option {{
-                background-color: red;
-                color: #111;
-        }}
-        .stSelectbox div div svg {{
-                fill: black;
-        }}
-    </style>
-    ''', unsafe_allow_html=True)
-
-# The Hero Section
-with hero:
-    # the logo
-    st.markdown("""<div style="position:relative; margin: auto; text-align: center;">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Map-circle-blue.svg/1024px-Map-circle-blue.svg.png" width=56>
-            </div>""", unsafe_allow_html=True)
-
-    # the header
-    st.markdown('<h1 style="text-align:center; position:relative; top:40%;">Super Store DATA</h1>', unsafe_allow_html=True)
-
-
-# The Rows
-with topRow:
-
-    # Calculate the total number of invoices
-    total_invoices = chosen_line.shape[0]
-
-    # Calculate the average rating and number of ratings
-    average_rating = chosen_line['Rating'].mean()
-
-    # Find the most active time for invoices
-    most_active_time = chosen_line['Order_time'].mode()[0]
-    # the result is 2:14 PM so I'll type it by hand for now.
-    st.markdown(
-        """
-        <div class="subheader">Top Stats</div>
-        <div class="top-stats">
-            <div class="stat">
-                <p>Total Invoices<br><span> %d </span></p>
-            </div>
-            <div class="stat">
-                <p>Average Rating<br><span> %.2f </span></p>
-            </div>
-            <div class="stat">
-                <p>Most Active Time<br><span> %s </span></p>
-            </div>
-        </div>
-        """ % (total_invoices, average_rating, most_active_time),
-        unsafe_allow_html=True
-    )
-    
-    
-with midRow:
-    # Calculate the total income, costs, and profit
-    depts_income = chosen_line['Total_price'].sum()
-    depts_costs = chosen_line['costs'].sum()
-    depts_profit = depts_income - depts_costs
-
-    st.markdown(
-        """
-        <div class="top-stats">
-            <div class="stat" style="background-color: #093b09;">
-                <p>Income<br><span>&pound; %.1f</span></p>
-            </div>
-            <div class="stat" style="background-color: #4e0000;">
-                <p>Costs<br><span>&pound; %.1f</span></p>
-            </div>
-            <div class="stat" style="background-color: #000062;">
-                <p>Profit<br><span>&pound; %.1f</span></p>
-            </div>
-        </div>
-        """ % (depts_income, depts_costs, depts_profit),
         unsafe_allow_html=True
     )
 
+    header = st.container()
+    content = st.container()
 
+    with st.sidebar:
+        page = option_menu(
+            menu_title='Sidebar',
+            options=['Home', 'Products', "Locations"],
+            icons=['house-fill', 'person-circle', "map-fill"],
+            menu_icon='chat-text-fill',
+            default_index=0,
+            styles={
+                "container": {"padding": "5!important", "background-color": '#000'},
+                "icon": {"color": "white", "font-size": "20px"},
+                "nav-link": {"color": "white", "font-size": "18px", "text-align": "left", "margin": "0px", },
+                "nav-link-selected": {"background-color": "#5E0303"},
 
-with chartRow:
-    # Filter for the month
-    superSales['Order_date'] = pd.to_datetime(superSales['Order_date'])
-    mar_data = (superSales['Order_date'].dt.month == 3)
-    lineQuantity = chosen_line[(mar_data)]
-
-    # Quantity for each day
-    quantity_per_day = lineQuantity.groupby('Order_date')['Quantity'].sum().reset_index()
-
-    # some space
-    st.markdown('<div></div>', unsafe_allow_html=True)
-    
-    # Create a line chart for Quantity over the last month using Plotly
-    fig_quantity = px.line(
-        quantity_per_day, 
-        x='Order_date', 
-        y='Quantity', 
-        title='Quantity Sold over the Last Month'
-    )
-    fig_quantity.update_layout(
-        margin_r=100,
-    )
-    st.plotly_chart(fig_quantity)
-
-
-with footer:
-    st.markdown("---")
-    st.markdown(
-        """
-        <style>
-            p {
-                font-size: 16px;
-                text-align: center;
             }
-            a {
-                text-decoration: none;
-                color: #00a;
-                font-weight: 600;
-            }
-        </style>
-        <p>
-            &copy; Designed by <a href="Your linkedln or webiste link">Your Name</a>.
-        </p>
-        """, unsafe_allow_html=True
+
         )
+
+        st.write("***")
+
+        # Get All Locations as a list
+        location_options = sorted(df["Location"].unique().tolist())
+        location_options.insert(0, "ALL")
+
+        # Home Page
+        if page == "Home":
+            category_filter = st.multiselect("Select The Category 👕💎",
+                                             options=sorted(
+                                                 df["Category"].unique().tolist()),
+                                             default=sorted(
+                                                 df["Category"].unique().tolist()))
+
+            size_filter = st.multiselect("Select The Size 👔",
+                                         options=sorted(
+                                             df["Size"].unique().tolist()),
+                                         default=sorted(
+                                             df["Size"].unique().tolist()))
+
+            location_filter = st.selectbox("Select The Location 🌏",
+                                           options=location_options,
+                                           index=0)
+
+            with header:
+                home.home_header()
+
+            with content:
+                df_filtered = home.filter_data(df, category_filter,
+                                               size_filter, location_filter)
+
+                left_col, mid_col, right_col = st.columns(3)
+
+                with left_col:
+                    st.subheader("Total Customers")
+                    st.subheader(home.total_customers(df_filtered))
+
+                with mid_col:
+                    st.subheader("Average Rating")
+                    st.subheader(home.avergae_rating(df_filtered))
+
+                with right_col:
+                    st.subheader("Total Purchases")
+                    st.subheader(home.total_purchases(df_filtered))
+
+                st.markdown("---")
+
+                left_chart, right_chart = st.columns(2)
+                with left_chart:
+                    st.plotly_chart(home.create_category_chart(
+                        df_filtered), use_container_width=True)
+
+                with right_chart:
+                    st.plotly_chart(home.create_gender_chart(
+                        df_filtered), use_container_width=True)
+
+                st.markdown("---")
+                st.plotly_chart(home.create_shipping_chart(
+                    df_filtered), use_container_width=True)
+
+        # Products Page
+        if page == "Products":
+            category_filter = st.multiselect("Select The Category 👕💎",
+                                             options=sorted(
+                                                 df["Category"].unique().tolist()),
+                                             default=sorted(
+                                                 df["Category"].unique().tolist()))
+
+            size_filter = st.multiselect("Select The Size 👔",
+                                         options=sorted(
+                                             df["Size"].unique().tolist()),
+                                         default=sorted(
+                                             df["Size"].unique().tolist()))
+
+            location_filter = st.selectbox("Select The Location 🌏",
+                                           options=location_options,
+                                           index=0)
+            with header:
+                products.products_header()
+
+            with content:
+                df_filtered = products.filter_data(df, category_filter,
+                                                   size_filter, location_filter)
+
+                left_col, mid_col, right_col = st.columns(3)
+
+                with left_col:
+                    st.image("imgs/dollar.png", caption="", width=70)
+                    st.subheader("Total Sales")
+                    st.subheader(products.total_sales(df_filtered))
+
+                with mid_col:
+                    st.image("imgs/clothes.png", width=70)
+                    st.subheader("Categories")
+                    st.subheader(products.number_of_category(df))
+
+                with right_col:
+                    st.image("imgs/online-shopping.png", width=70)
+                    st.subheader("Products")
+                    st.subheader(products.number_of_products(df_filtered))
+                st.markdown("---")
+
+                products_left_chart, products_right_chart = st.columns([7, 5])
+
+                with products_left_chart:
+                    st.plotly_chart(products.create_products_chart(df_filtered),
+                                    use_container_width=True)
+
+                with products_right_chart:
+                    st.plotly_chart(products.create_size_chart(
+                        df_filtered), use_container_width=True)
+
+                st.plotly_chart(
+                    products.category_via_season_chart(df_filtered),
+                    use_container_width=True)
+
+        # Locations Page
+        if page == "Locations":
+
+            category_filter = st.multiselect("Select The Category 👕💎",
+                                             options=sorted(
+                                                 df["Category"].unique().tolist()),
+                                             default=sorted(
+                                                 df["Category"].unique().tolist()))
+
+            size_filter = st.multiselect("Select The Size 👔",
+                                         options=sorted(
+                                             df["Size"].unique().tolist()),
+                                         default=sorted(
+                                             df["Size"].unique().tolist()))
+
+            season_filter = st.multiselect("Select The Season :snowflake::sunny:",
+                                           options=sorted(
+                                               df["Season"].unique().tolist()),
+                                           default=sorted(
+                                               df["Season"].unique().tolist()))
+            with header:
+                locations.sales_header()
+
+            with content:
+                df_filtered = locations.filter_data(df, category_filter,
+                                                    size_filter, season_filter)
+
+                st.plotly_chart(locations.create_map(df_filtered),
+                                use_container_width=True)
+
+                st.markdown("---")
+
+                st.plotly_chart(locations.create_subscription_via_location(df_filtered),
+                                use_container_width=True)
+
+                st.markdown("---")
+
+                l_c, r_c = st.columns([7, 5])
+                with l_c:
+
+                    st.plotly_chart(locations.create_location_category(df_filtered),
+                                    use_container_width=True)
+
+                with r_c:
+                    st.plotly_chart(locations.create_top3_review(
+                        df_filtered), use_container_width=True)
+
+
+run()
